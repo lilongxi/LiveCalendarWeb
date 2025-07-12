@@ -59,9 +59,9 @@ const TimeRangeSelector = () => {
       const isSelectableHour = hour >= 9 && hour <= 17;
 
       const quarterHourSlots = [0, 15, 30, 45].map((minute) => {
-    const time = setMinutes(setHours(startOfDay(selectedDate), hour), minute);
-    const isPast = isToday && isBefore(time, now);
-    const isSelected = selectedTime && isEqual(time, selectedTime);
+      const time = setMinutes(setHours(startOfDay(selectedDate), hour), minute);
+      const isPast = isToday && isBefore(time, now);
+      const isSelected = selectedTime && isEqual(time, selectedTime);
 
         return (
            <TooltipProvider key={minute} delayDuration={200}>
