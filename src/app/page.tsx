@@ -18,9 +18,8 @@ export default function Page() {
       return;
     }
     try {
-      await api.post('http://localhost:3306/api/partners/create', { name });
-      alert('创建成功!');
-      router.push('/partners');
+      const newPartner: any = await api.post('http://localhost:3306/api/partners/create', { name });
+      router.push('/partners?id=' + newPartner?.data?.id?.toString());
     } catch (error) {
       console.error('创建失败:', error);
       alert('创建失败，请查看控制台获取更多信息。');
