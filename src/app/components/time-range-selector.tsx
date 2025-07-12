@@ -1,9 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { addDays, format, startOfDay, isBefore, setHours, setMinutes, isSameDay, getHours, getMinutes, isEqual } from 'date-fns';
+import { addDays, format, startOfDay, isBefore, setHours, setMinutes, isSameDay, isEqual } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -11,6 +19,8 @@ import { cn } from '@/lib/utils';
 const TimeRangeSelector = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [timeToConfirm, setTimeToConfirm] = useState<Date | null>(null);
   const today = startOfDay(new Date());
   const maxDate = addDays(today, 6);
 
@@ -30,6 +40,16 @@ const TimeRangeSelector = () => {
     setSelectedTime(null); // Reset time when changing day
   };
 
+  const handleTimeClick = (time: Date) => {
+    setTimeToConfirm(time);
+    setDialogOpen(true);
+  };
+
+  const handleConfirm = () => {
+    setSelectedTime(timeToConfirm);
+    setDialogOpen(false);
+  };
+
   const renderTimeSlots = () => {
     const timeSlots = [];
     const now = new Date();
@@ -39,18 +59,18 @@ const TimeRangeSelector = () => {
       const isSelectableHour = hour >= 9 && hour <= 17;
 
       const quarterHourSlots = [0, 15, 30, 45].map((minute) => {
-        const time = setMinutes(setHours(startOfDay(selectedDate), hour), minute);
-        const isPast = isToday && isBefore(time, now);
-        const isSelected = selectedTime && isEqual(time, selectedTime);
+    const time = setMinutes(setHours(startOfDay(selectedDate), hour), minute);
+    const isPast = isToday && isBefore(time, now);
+    const isSelected = selectedTime && isEqual(time, selectedTime);
 
         return (
-          <TooltipProvider key={minute} delayDuration={200}>
+           <TooltipProvider key={minute} delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant={isSelected ? 'default' : 'ghost'}
                   disabled={!isSelectableHour || isPast}
-                  onClick={() => setSelectedTime(time)}
+                  onClick={() => handleTimeClick(time)}
                   className={cn('w-full h-full', {
                     'bg-black text-white hover:bg-black/90': isSelected,
                     'bg-muted text-muted-foreground cursor-not-allowed': !isSelectableHour || isPast,
@@ -89,6 +109,7 @@ const TimeRangeSelector = () => {
   };
 
   return (
+    <>
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -110,6 +131,21 @@ const TimeRangeSelector = () => {
         {renderTimeSlots()}
       </CardContent>
     </Card>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认选择</DialogTitle>
+            <DialogDescription>
+              您确定要选择 {timeToConfirm ? format(timeToConfirm, 'yyyy-MM-dd HH:mm') : ''} 吗？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button onClick={handleConfirm}>确认</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
