@@ -9,7 +9,7 @@ import { isEqual } from 'date-fns';
 function FounderPageContent() {
   const searchParams = useSearchParams();
   const shareId = searchParams.get('id');
-  const [availableSlots, setAvailableSlots] = useState<Date[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<SelectedTime[]>([]);
   const [partnerName, setPartnerName] = useState('');
 
   useEffect(() => {
@@ -17,7 +17,7 @@ function FounderPageContent() {
       api.get(`http://localhost:3306/api/partners/share_link/${shareId}`).then((res: any) => {
         if (res?.data) {
           setPartnerName(res.data.partner_name || '');
-          const available = res.data.available_slots.map((t: any) => new Date(t.start_time));
+          const available = res.data.available_slots.map((t: any) => ({ ...t, time: new Date(t.start_time) }));
           setAvailableSlots(available);
         }
       }).catch(err => {
@@ -28,7 +28,9 @@ function FounderPageContent() {
   }, [shareId]);
 
   const handleAppointmentSelect = async (selection: SelectedTime) => {
+
     if (selection.isAppointment) return;
+
     const founderName = prompt("请输入您的名字:");
     if (!founderName) {
         alert("名字不能为空");
@@ -40,9 +42,11 @@ function FounderPageContent() {
         founder_name: founderName,
       });
 
-      setAvailableSlots(prev => prev.filter(time => !isEqual(time, selection.time)));
+      console.log(res)
 
-      alert('预约成功!');
+      // setAvailableSlots(prev => prev.filter(item => !isEqual(item.time, selection.time)));
+
+      // alert('预约成功!');
     } catch (error) {
       console.error('预约失败:', error);
       alert('预约失败，该时间可能已被预约。');

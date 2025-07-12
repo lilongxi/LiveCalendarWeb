@@ -27,7 +27,7 @@ interface TimeRangeSelectorProps {
   partnerId?: string;
   selectedTimes?: SelectedTime[];
   onTimeSelect?: (selection: SelectedTime) => void;
-  availableTimes?: Date[];
+  availableTimes?: SelectedTime[];
   managementMode?: boolean;
   disabled?: boolean;
 }
@@ -76,7 +76,10 @@ const TimeRangeSelector = ({
   };
 
   const handleConfirm = () => {
-    if (timeToConfirm) {
+    const existingSelection = availableTimes?.find(st => isEqual(st.time, timeToConfirm!));
+    if (existingSelection) {
+      onTimeSelect(existingSelection)
+    } else if (timeToConfirm) {
       onTimeSelect({ time: timeToConfirm, isActive: true, id: '', isAppointment: false });
     }
     setDialogOpen(false);
@@ -101,7 +104,7 @@ const TimeRangeSelector = ({
         const isSelectedInactive = selection?.isActive === false;
         const isAppointed = selection?.isAppointment === true;
 
-        const isAvailable = availableTimes ? availableTimes.some(availableTime => isEqual(time, availableTime)) : true;
+        const isAvailable = availableTimes ? availableTimes.some(item => isEqual(time, item.time)) : true;
 
         let isDisabled = disabled || !isSelectableHour || isPast || isAppointed;
         if (availableTimes) {
