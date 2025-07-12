@@ -1,4 +1,4 @@
-import TimeRangeSelector from '../components/time-range-selector';
+import TimeRangeSelector from '@/components/custom/time-range-selector';
 
 export default function Page() {
   return (
