@@ -19,16 +19,26 @@ import { cn } from '@/lib/utils';
 export interface SelectedTime {
   time: Date;
   isActive: boolean;
+  isAppointment: boolean;
   id: string
 }
 
 interface TimeRangeSelectorProps {
-  partnerId: string;
-  selectedTimes: SelectedTime[];
-  onTimeSelect: (selection: SelectedTime) => void;
+  partnerId?: string;
+  selectedTimes?: SelectedTime[];
+  onTimeSelect?: (selection: SelectedTime) => void;
+  availableTimes?: Date[];
+  managementMode?: boolean;
+  disabled?: boolean;
 }
 
-const TimeRangeSelector = ({ partnerId, selectedTimes = [], onTimeSelect }: TimeRangeSelectorProps) => {
+const TimeRangeSelector = ({ 
+  selectedTimes = [], 
+  onTimeSelect = () => {},
+  availableTimes,
+  managementMode = false,
+  disabled = false
+}: TimeRangeSelectorProps) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [timeToConfirm, setTimeToConfirm] = useState<Date | null>(null);
@@ -60,7 +70,6 @@ const TimeRangeSelector = ({ partnerId, selectedTimes = [], onTimeSelect }: Time
     if (existingSelection) {
       onTimeSelect(existingSelection);
     } else {
-      // For new selections, open the confirmation dialog
       setTimeToConfirm(time);
       setDialogOpen(true);
     }
@@ -68,7 +77,7 @@ const TimeRangeSelector = ({ partnerId, selectedTimes = [], onTimeSelect }: Time
 
   const handleConfirm = () => {
     if (timeToConfirm) {
-      onTimeSelect({ time: timeToConfirm, isActive: true, id: '' });
+      onTimeSelect({ time: timeToConfirm, isActive: true, id: '', isAppointment: false });
     }
     setDialogOpen(false);
   };
@@ -90,6 +99,18 @@ const TimeRangeSelector = ({ partnerId, selectedTimes = [], onTimeSelect }: Time
         const selection = selectedTimes.find(selectedTime => isEqual(time, selectedTime.time));
         const isSelectedActive = selection?.isActive === true;
         const isSelectedInactive = selection?.isActive === false;
+        const isAppointed = selection?.isAppointment === true;
+
+        const isAvailable = availableTimes ? availableTimes.some(availableTime => isEqual(time, availableTime)) : true;
+
+        let isDisabled = disabled || !isSelectableHour || isPast || isAppointed;
+        if (availableTimes) {
+          isDisabled = isDisabled || !isAvailable;
+        }
+
+        if (!managementMode) {
+          isDisabled = isDisabled || isSelectedInactive;
+        }
 
         return (
           <TooltipProvider key={minute} delayDuration={200}>
@@ -98,12 +119,14 @@ const TimeRangeSelector = ({ partnerId, selectedTimes = [], onTimeSelect }: Time
                 <Button
                   variant={isSelectedActive ? 'default' : 'ghost'}
                   data-slot={selection?.id}
-                  disabled={!isSelectableHour || isPast || isSelectedInactive}
+                  disabled={isDisabled}
                   onClick={() => handleTimeClick(time)}
                   className={cn('w-full h-full', {
                     'bg-black text-white hover:bg-black/90': isSelectedActive,
-                    'bg-red-500 text-white cursor-not-allowed hover:bg-red-500/90': isSelectedInactive,
-                    'bg-muted text-muted-foreground cursor-not-allowed': !isSelectableHour || isPast,
+                    'bg-yellow-500 text-white cursor-not-allowed hover:bg-yellow-500/90': isAppointed,
+                    'bg-red-500 text-white cursor-not-allowed hover:bg-red-500/90': isSelectedInactive && !managementMode,
+                    'bg-red-500 text-white hover:bg-red-500/90': isSelectedInactive && managementMode,
+                    'bg-muted text-muted-foreground cursor-not-allowed': !isSelectableHour || isPast || (availableTimes && !isAvailable) || disabled,
                   })}
                 >
                   {format(time, 'mm')}
@@ -139,14 +162,14 @@ const TimeRangeSelector = ({ partnerId, selectedTimes = [], onTimeSelect }: Time
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <Button onClick={handlePrevDay} disabled={isSameDay(selectedDate, today)} variant="outline">
+            <Button onClick={handlePrevDay} disabled={isSameDay(selectedDate, today) || disabled} variant="outline">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className='text-center'>
               <p className="text-xl font-semibold">{format(selectedDate, 'yyyy-MM-dd')}</p>
               <p className="text-sm text-muted-foreground">请选择一个时间</p>
             </div>
-            <Button onClick={handleNextDay} disabled={isSameDay(selectedDate, maxDate)} variant="outline">
+            <Button onClick={handleNextDay} disabled={isSameDay(selectedDate, maxDate) || disabled} variant="outline">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

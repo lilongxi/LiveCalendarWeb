@@ -14,7 +14,7 @@ function PartnerPageContent() {
     if (partnerId) {
       api.get(`http://localhost:3306/api/slots/all?partner_id=${partnerId}`).then((res: any) => {
         if (res?.data) {
-          setSelectedTimes(res.data.map((t: any) => ({ time: new Date(t.start_time), isActive: t.is_active, id: t.id })));
+          setSelectedTimes(res.data.map((t: any) => ({ time: new Date(t.start_time), isActive: t.is_active, id: t.id, isAppointment: t.is_appointment })));
         }
       });
     }
@@ -54,7 +54,7 @@ function PartnerPageContent() {
                 )
               );
         } else {
-            setSelectedTimes(prevTimes => [...prevTimes, { time, isActive: true, id: newSolts?.data?.id }]);
+            setSelectedTimes(prevTimes => [...prevTimes, { time, isActive: true, id: newSolts?.data?.id, isAppointment: false }]);
         }
         alert('时间段预定成功!');
       } catch (error) {

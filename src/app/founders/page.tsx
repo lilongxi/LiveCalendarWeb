@@ -1,9 +1,5 @@
-import TimeRangeSelector from '@/components/custom/time-range-selector';
+import FounderPageClient from './founder-page-client';
 
 export default function Page() {
-  return (
-    <div>
-      {/* <TimeRangeSelector /> */}
-    </div>
-  );
+  return <FounderPageClient />;
 }
