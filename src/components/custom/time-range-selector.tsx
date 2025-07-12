@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { addDays, format, startOfDay, isBefore, setHours, setMinutes, isSameDay, isEqual } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
-const TimeRangeSelector = () => {
+export interface SelectedTime {
+  time: Date;
+  isActive: boolean;
+  id: string
+}
+
+interface TimeRangeSelectorProps {
+  partnerId: string;
+  selectedTimes: SelectedTime[];
+  onTimeSelect: (selection: SelectedTime) => void;
+}
+
+const TimeRangeSelector = ({ partnerId, selectedTimes = [], onTimeSelect }: TimeRangeSelectorProps) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [timeToConfirm, setTimeToConfirm] = useState<Date | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const today = startOfDay(new Date());
   const maxDate = addDays(today, 6);
 
@@ -29,7 +46,6 @@ const TimeRangeSelector = () => {
       const newDate = addDays(prevDate, -1);
       return isBefore(newDate, today) ? prevDate : newDate;
     });
-    setSelectedTime(null); // Reset time when changing day
   };
 
   const handleNextDay = () => {
@@ -37,42 +53,56 @@ const TimeRangeSelector = () => {
       const newDate = addDays(prevDate, 1);
       return isBefore(newDate, maxDate) || isSameDay(newDate, maxDate) ? newDate : prevDate;
     });
-    setSelectedTime(null); // Reset time when changing day
   };
 
   const handleTimeClick = (time: Date) => {
-    setTimeToConfirm(time);
-    setDialogOpen(true);
+    const existingSelection = selectedTimes.find(st => isEqual(st.time, time));
+    if (existingSelection) {
+      onTimeSelect(existingSelection);
+    } else {
+      // For new selections, open the confirmation dialog
+      setTimeToConfirm(time);
+      setDialogOpen(true);
+    }
   };
 
   const handleConfirm = () => {
-    setSelectedTime(timeToConfirm);
+    if (timeToConfirm) {
+      onTimeSelect({ time: timeToConfirm, isActive: true, id: '' });
+    }
     setDialogOpen(false);
   };
 
   const renderTimeSlots = () => {
+    if (!isClient) {
+      return <div>Loading...</div>; // Or a placeholder
+    }
     const timeSlots = [];
     const now = new Date();
     const isToday = isSameDay(selectedDate, today);
 
-     for (let hour = 7; hour <= 20; hour++) {
+    for (let hour = 7; hour <= 20; hour++) {
       const isSelectableHour = hour >= 9 && hour <= 17;
 
       const quarterHourSlots = [0, 15, 30, 45].map((minute) => {
-      const time = setMinutes(setHours(startOfDay(selectedDate), hour), minute);
-      const isPast = isToday && isBefore(time, now);
-      const isSelected = selectedTime && isEqual(time, selectedTime);
+        const time = setMinutes(setHours(startOfDay(selectedDate), hour), minute);
+        const isPast = isToday && isBefore(time, now);
+        const selection = selectedTimes.find(selectedTime => isEqual(time, selectedTime.time));
+        const isSelectedActive = selection?.isActive === true;
+        const isSelectedInactive = selection?.isActive === false;
 
         return (
-           <TooltipProvider key={minute} delayDuration={200}>
+          <TooltipProvider key={minute} delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant={isSelected ? 'default' : 'ghost'}
-                  disabled={!isSelectableHour || isPast}
+                  variant={isSelectedActive ? 'default' : 'ghost'}
+                  data-slot={selection?.id}
+                  disabled={!isSelectableHour || isPast || isSelectedInactive}
                   onClick={() => handleTimeClick(time)}
                   className={cn('w-full h-full', {
-                    'bg-black text-white hover:bg-black/90': isSelected,
+                    'bg-black text-white hover:bg-black/90': isSelectedActive,
+                    'bg-red-500 text-white cursor-not-allowed hover:bg-red-500/90': isSelectedInactive,
                     'bg-muted text-muted-foreground cursor-not-allowed': !isSelectableHour || isPast,
                   })}
                 >
@@ -101,37 +131,29 @@ const TimeRangeSelector = () => {
       );
     }
 
-    return (
-      <div className="grid grid-cols-4 gap-4">
-        {timeSlots}
-      </div>
-    );
+    return <div className="grid grid-cols-4 gap-4">{timeSlots}</div>;
   };
 
   return (
     <>
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <Button onClick={handlePrevDay} disabled={isSameDay(selectedDate, today)} variant="outline">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className='text-center'>
-            <p className="text-xl font-semibold">{format(selectedDate, 'yyyy-MM-dd')}</p>
-            <p className="text-sm text-muted-foreground">
-              {selectedTime ? `已选择: ${format(selectedTime, 'HH:mm')}` : '请选择一个时间'}
-            </p>
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <Button onClick={handlePrevDay} disabled={isSameDay(selectedDate, today)} variant="outline">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className='text-center'>
+              <p className="text-xl font-semibold">{format(selectedDate, 'yyyy-MM-dd')}</p>
+              <p className="text-sm text-muted-foreground">请选择一个时间</p>
+            </div>
+            <Button onClick={handleNextDay} disabled={isSameDay(selectedDate, maxDate)} variant="outline">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-          <Button onClick={handleNextDay} disabled={isSameDay(selectedDate, maxDate)} variant="outline">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {renderTimeSlots()}
-      </CardContent>
-    </Card>
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        </CardHeader>
+        <CardContent>{renderTimeSlots()}</CardContent>
+      </Card>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>确认选择</DialogTitle>
